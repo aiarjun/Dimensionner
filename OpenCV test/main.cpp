@@ -15,8 +15,12 @@ Mat getEnergyImage(Mat& image){
     image_grey = image_blur;
     cvtColor(image_blur,image_grey,COLOR_BGR2GRAY);
 
-    Sobel(image_grey,gradientX,ddepth,1,0);
-    Sobel(image_grey,gradientY,ddepth,0,1);
+//    Sobel(image_grey,gradientX,ddepth,1,0);
+//    Sobel(image_grey,gradientY,ddepth,0,1);
+
+    Scharr(image_grey,gradientX, ddepth,1,0);
+    Scharr(image_grey,gradientY, ddepth,0,1);
+
 
     convertScaleAbs(gradientX,absGradientX);
     convertScaleAbs(gradientY,absGradientY);
@@ -24,7 +28,7 @@ Mat getEnergyImage(Mat& image){
     addWeighted(absGradientX,0.5,absGradientY,0.5,0,gradient);
     namedWindow("Gradient",WINDOW_NORMAL);
     imshow("Gradient",gradient);
-    imwrite("images/gradient_bw.jpg",gradient);
+    imwrite("images/scharr_gradient_smooth.jpg",gradient);
     waitKey(0);
     return gradient;
 }
