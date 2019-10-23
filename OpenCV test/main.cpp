@@ -1,8 +1,5 @@
 #include <iostream>
 #include <opencv2/opencv.hpp>
-#include <opencv2/core/core.hpp>
-#include <opencv2/highgui/highgui.hpp>
-#include <opencv2/imgproc/imgproc.hpp>
 
 using namespace std;
 using namespace cv;
@@ -19,11 +16,11 @@ Mat getEnergyImage(Mat& image){
     image_grey = image_blur;
     cvtColor(image_blur,image_grey,COLOR_BGR2GRAY);
 
-    Sobel(image_grey,gradientX,ddepth,1,0);
-    Sobel(image_grey,gradientY,ddepth,0,1);
+//    Sobel(image_grey,gradientX,ddepth,1,0);
+//    Sobel(image_grey,gradientY,ddepth,0,1);
 
-//    Scharr(image_grey,gradientX, ddepth,1,0);
-//    Scharr(image_grey,gradientY, ddepth,0,1);
+    Scharr(image_grey,gradientX, ddepth,1,0);
+    Scharr(image_grey,gradientY, ddepth,0,1);
 
 
     convertScaleAbs(gradientX,absGradientX);
