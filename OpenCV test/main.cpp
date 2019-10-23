@@ -31,8 +31,7 @@ Mat getEnergyImage(Mat& image){
     gradient.convertTo(energyImage,CV_64F,1.0/255.0);
 
 
-    namedWindow("Energy image",WINDOW_NORMAL);
-    imshow("Energy image",energyImage);waitKey(0);
+    //namedWindow("Energy image",WINDOW_NORMAL);imshow("Energy image",energyImage);waitKey(0);
 
     return energyImage;
 }
@@ -140,7 +139,7 @@ void showPath(Mat energyImage,vector<int> path){
         energyImage.at<double>(row,path[row]) = 1;
     }
 
-    namedWindow("Optimal seam",WINDOW_NORMAL);imshow("Optimal seam",energyImage);waitKey(0);
+    //namedWindow("Optimal seam",WINDOW_NORMAL);imshow("Optimal seam",energyImage);waitKey(0);
 }
 
 Mat reduce(Mat& image,vector<int> path){
@@ -149,7 +148,7 @@ Mat reduce(Mat& image,vector<int> path){
     int rowsize = image.rows;
     int colsize = image.cols;
 
-    Mat dummyColumn(1,1,CV_8UC3,Vec3b(0,0,0));
+    Mat dummyColumn(1,1,image.type(),Vec3b(0,0,0));
 
 
     for(int row = 0;row < rowsize;row++){
@@ -172,19 +171,30 @@ Mat reduce(Mat& image,vector<int> path){
     }
 
     image = image.colRange(0,colsize - 1);
-    namedWindow("Reduced image",WINDOW_NORMAL);imshow("Reduced image",image);waitKey(0);
+    //namedWindow("Reduced image",WINDOW_NORMAL);imshow("Reduced image",image);waitKey(0);
 
     return image;
 }
 
 int main(int argc, char** argv) {
-    string imageName = "images/surfer.jpg";
-    Mat image;
-    image = imread(imageName,IMREAD_COLOR);
-    Mat energyImage = getEnergyImage(image);
-    Mat cumulativeEnergyImage = getCumulativeEnergyMap(energyImage);
-    vector<int> path = findOptimalSeam(cumulativeEnergyImage);
-    showPath(energyImage,path);
-    Mat reducedImage = reduce(image,path);
+    string imageName;
+    cout<<"Image path : ";
+    cin>>imageName;
+    Mat image = imread(imageName,IMREAD_COLOR);
+    if(image.empty()){
+        exit(1);
+    }
+    int iterations;
+    cout<<"Iterations : ";
+    cin>>iterations;
+    for(int i = 0;i < iterations;i++){
+        cout<<i<<endl;
+        Mat energyImage = getEnergyImage(image);
+        Mat cumulativeEnergyImage = getCumulativeEnergyMap(energyImage);
+        vector<int> path = findOptimalSeam(cumulativeEnergyImage);
+        showPath(energyImage,path);
+        Mat reducedImage = reduce(image,path);
+    }
+    imwrite("images/reduced_image.jpg",image);
     return 0;
 }
