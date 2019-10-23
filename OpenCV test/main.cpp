@@ -67,14 +67,14 @@ Mat getCumulativeEnergyMap(Mat& energyImage){
 
     // create and show the newly created cumulative energy map converting map into color
 
-    Mat color_cumulative_energy_map;
-    double Cmin;
-    double Cmax;
-    minMaxLoc(cumulativeEnergyMap, &Cmin, &Cmax);
-    float scale = 255.0 / (Cmax - Cmin);
-    cumulativeEnergyMap.convertTo(color_cumulative_energy_map, CV_8UC1, scale);
-    applyColorMap(color_cumulative_energy_map, color_cumulative_energy_map, cv::COLORMAP_JET);
-    namedWindow("Cumulative Energy Map", WINDOW_NORMAL); imshow("Cumulative Energy Map", color_cumulative_energy_map);waitKey(0);
+//    Mat color_cumulative_energy_map;
+//    double Cmin;
+//    double Cmax;
+//    minMaxLoc(cumulativeEnergyMap, &Cmin, &Cmax);
+//    float scale = 255.0 / (Cmax - Cmin);
+//    cumulativeEnergyMap.convertTo(color_cumulative_energy_map, CV_8UC1, scale);
+//    applyColorMap(color_cumulative_energy_map, color_cumulative_energy_map, cv::COLORMAP_JET);
+//    namedWindow("Cumulative Energy Map", WINDOW_NORMAL); imshow("Cumulative Energy Map", color_cumulative_energy_map);waitKey(0);
 
 
 //    namedWindow("Cumulative energy map",WINDOW_NORMAL);imshow("Cumulative energy map",cumulativeEnergyMap);
@@ -146,6 +146,40 @@ void showPath(Mat energyImage,vector<int> path){
     namedWindow("Optimal seam",WINDOW_NORMAL);imshow("Optimal seam",energyImage);waitKey(0);
 }
 
+Mat reduce(Mat& image,vector<int> path){
+    //copy all the rows to the new image
+
+    int rowsize = image.rows;
+    int colsize = image.cols;
+
+    Mat dummyColumn(1,1,CV_8UC3,Vec3b(0,0,0));
+
+
+    for(int row = 0;row < rowsize;row++){
+        Mat requiredRow;
+        Mat leftPartOfRow = image.rowRange(row,row + 1).colRange(0,path[row]);
+        Mat rightPartOfRow = image.rowRange(row,row + 1).colRange(path[row] + 1,colsize);
+
+        if(!leftPartOfRow.empty() && !rightPartOfRow.empty()){
+            hconcat(leftPartOfRow,rightPartOfRow,requiredRow);
+            hconcat(requiredRow,dummyColumn,requiredRow);
+        }
+        else if(leftPartOfRow.empty()){
+            hconcat(rightPartOfRow,dummyColumn,requiredRow);
+        }
+        else{
+            hconcat(leftPartOfRow,dummyColumn,requiredRow);
+        }
+
+        requiredRow.copyTo(image.row(row));
+    }
+
+    image = image.colRange(0,colsize - 1);
+    namedWindow("Reduced image",WINDOW_NORMAL);imshow("Reduced image",image);waitKey(0);
+
+    return image;
+}
+
 int main(int argc, char** argv) {
     string imageName = "images/surfer.jpg";
     Mat image;
@@ -154,5 +188,6 @@ int main(int argc, char** argv) {
     Mat cumulativeEnergyImage = getCumulativeEnergyMap(energyImage);
     vector<int> path = findOptimalSeam(cumulativeEnergyImage);
     showPath(energyImage,path);
+    Mat reducedImage = reduce(image,path);
     return 0;
 }
