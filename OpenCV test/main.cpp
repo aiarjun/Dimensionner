@@ -15,11 +15,11 @@ Mat getEnergyImage(Mat& image){
     image_grey = image_blur;
     cvtColor(image_blur,image_grey,COLOR_BGR2GRAY);
 
-//    Sobel(image_grey,gradientX,ddepth,1,0);
-//    Sobel(image_grey,gradientY,ddepth,0,1);
+    Sobel(image_grey,gradientX,ddepth,1,0);
+    Sobel(image_grey,gradientY,ddepth,0,1);
 
-    Scharr(image_grey,gradientX, ddepth,1,0);
-    Scharr(image_grey,gradientY, ddepth,0,1);
+//    Scharr(image_grey,gradientX, ddepth,1,0);
+//    Scharr(image_grey,gradientY, ddepth,0,1);
 
 
     convertScaleAbs(gradientX,absGradientX);
@@ -28,45 +28,47 @@ Mat getEnergyImage(Mat& image){
     addWeighted(absGradientX,0.5,absGradientY,0.5,0,gradient);
     namedWindow("Gradient",WINDOW_NORMAL);
     imshow("Gradient",gradient);
-    imwrite("images/scharr_gradient_smooth.jpg",gradient);
+    imwrite("images/gradient_bw.jpg",gradient);
     waitKey(0);
     return gradient;
 }
 
 
+Mat getCumulativeEnergyMap(Mat& energyImage){
+    int rowsize = energyImage.rows;
+    int colsize = energyImage.cols;
+
+    double upperLeftCumulativeEnergy,upperCumulativeEnergy,upperRightCumulativeEnergy;
+    double minimumCumulativeEnergyUntilNow;
+    Mat cumulativeEnergyMap = Mat(rowsize,colsize,CV_64F,double(0));
+
+    energyImage.row(0).copyTo(cumulativeEnergyMap.row(0));
+
+
+    for(int row = 1;row < rowsize;row++){
+        for(int col = 0;col < colsize;col++){
+            upperLeftCumulativeEnergy = cumulativeEnergyMap.at<double>(row - 1,max(col - 1,0)); //max function to handle the left most column(which doesn't have col - 1)
+            upperCumulativeEnergy = cumulativeEnergyMap.at<double>(row-1,col);
+            upperRightCumulativeEnergy = cumulativeEnergyMap.at<double>(row - 1,min(col + 1,colsize-1)); //min function to handle the right most column(which doesn't have col + 1)
+
+            minimumCumulativeEnergyUntilNow = min(min(upperLeftCumulativeEnergy,upperCumulativeEnergy),upperRightCumulativeEnergy);
+
+            cumulativeEnergyMap.at<double>(row,col) = energyImage.at<double>(row,col);
+        }
+    }
+    //namedWindow("Cumulative energy map",WINDOW_NORMAL);
+    //imshow("Cumulative energy map",cumulativeEnergyMap);
+    //imwrite("images/cumulative_energy_map.jpg",cumulativeEnergyMap);
+    return cumulativeEnergyMap;
+}
+
+
 int main(int argc, char** argv) {
-    int row = 485;
-    int column = 1397;
     string imageName = "images/scenery.jpg";
     Mat image;
     image = imread(imageName,IMREAD_COLOR);
     Mat energyImage = getEnergyImage(image);
 
-//    Vec3b intensity = image.at<Vec3b>(row,column);
-//    float blue = intensity.val[0];
-//    float green = intensity.val[1];
-//    float red = intensity.val[2];
-//
-//    cout << "Blue:" << blue << endl;
-//    cout << "Green:" << green  << endl;
-//    cout << "Red:" << red << endl;
-
-
-
-
-
-//    Mat image2 = image;
-//    for(int x=0;x<100;x++){
-//        for(int y=0;y<100;y++){
-//            Vec3b color = image2.at<Vec3b>(y,x);
-//            color[0] = 0;
-//            color[1] = 255;
-//            color[2] = 0;
-//
-//            image2.at<Vec3b>(y,x) = color;
-//        }
-//    }
-//    imshow("New image",image2);
-//    imwrite("new_image.jpg",image2);
+    Mat cumulativeEnergyMap = getCumulativeEnergyMap(energyImage);
     return 0;
 }
