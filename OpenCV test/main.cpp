@@ -83,11 +83,76 @@ Mat getCumulativeEnergyMap(Mat& energyImage){
 }
 
 
+vector<int> findOptimalSeam(Mat& cumulativeEnergyMap){
+    vector<int> path;
+    double a,b,c;
+    int rowsize = cumulativeEnergyMap.rows;
+    int colsize = cumulativeEnergyMap.cols;
+    double minVal,maxVal;
+    Point minPoint,maxPoint;
+    int offset;
+
+
+    Mat lastRow = cumulativeEnergyMap.row(rowsize - 1);
+
+    minMaxLoc(lastRow,&minVal,&maxVal,&minPoint,&maxPoint);
+
+    int minColIndex = minPoint.x;
+
+    path.resize(rowsize);
+    path[rowsize - 1] = minColIndex;
+
+    for(int row = rowsize - 2;row >= 0;row--){
+        a = cumulativeEnergyMap.at<double>(row,max(minColIndex - 1,0));
+        b = cumulativeEnergyMap.at<double>(row,minColIndex);
+        c = cumulativeEnergyMap.at<double>(row,min(minColIndex + 1,colsize - 1));
+
+        if(a < min(b,c)){
+            //a is the least value
+            offset = -1;
+        }
+        else if(b < min(a,c)){
+            offset = 0;
+        }
+        else{
+            offset = 1;
+        }
+
+        minColIndex += offset;
+        if(minColIndex > colsize - 1){
+            minColIndex = colsize - 1;
+        }
+        else if(minColIndex < 0){
+            minColIndex = 0;
+        }
+        path[row] = minColIndex;
+    }
+
+
+    //we have now obtained a path from the last row to the first row, storing all the column values
+
+    //now we have to remove that seam
+
+    return path;
+
+}
+
+
+void showPath(Mat energyImage,vector<int> path){
+    for(int row = 0;row < energyImage.rows;row++){
+        energyImage.at<double>(row,path[row]) = 1;
+    }
+
+    namedWindow("Optimal seam",WINDOW_NORMAL);imshow("Optimal seam",energyImage);waitKey(0);
+}
+
 int main(int argc, char** argv) {
     string imageName = "images/surfer.jpg";
     Mat image;
     image = imread(imageName,IMREAD_COLOR);
     Mat energyImage = getEnergyImage(image);
     Mat cumulativeEnergyImage = getCumulativeEnergyMap(energyImage);
+    vector<int> path = findOptimalSeam(cumulativeEnergyImage);
+    showPath(energyImage,path);
     return 0;
 }
