@@ -14,32 +14,32 @@ double squareDifference(double x,double y){
     return pow((x-y),2);
 }
 
-double getColorDifference(Mat image,double row1,double col1,double row2,double col2){
-    double blue1 = image.at<double>(row1,col1)[0];
-    double green1 = image.at<double>(row1,col1)[1];
-    double red1 = image.at<double>(row1,col1)[2];
-    double blue2 = image.at<double>(row2,col2)[0];
-    double green2 = image.at<double>(row2,col2)[1];
-    double red2 = image.at<double>(row2,col2)[2];
+double getColorDifference(Mat& image,double row1,double col1,double row2,double col2){
+    int blue1 = image.at<Vec3b>(row1,col1)[0];
+    int green1 = image.at<Vec3b>(row1,col1)[1];
+    int red1 = image.at<Vec3b>(row1,col1)[2];
+    int blue2 = image.at<Vec3b>(row2,col2)[0];
+    int green2 = image.at<Vec3b>(row2,col2)[1];
+    int red2 = image.at<Vec3b>(row2,col2)[2];
 
     double difference = squareDifference(blue1,blue2) + squareDifference(green1,green2) + squareDifference(red1,red2);
 
     return difference;
 }
 
-vector<int> getForwardCosts(Mat image,double row,double col){
+double* getForwardCosts(Mat& image,double row,double col){
 
     double l = 0,u = 0,r = 0;
 
-    int rowsize = energyImage.rows;
-    int colsize = energyImage.cols;
+    int rowsize = image.rows;
+    int colsize = image.cols;
 
     if(row == 0){
         u = getColorDifference(image,row,col-1,row,col+1);
     }
     else if(col == 0){
         u = getColorDifference(image,row,col,row,col+1);
-        l = getColorDifference(image,row,col,row,col+1) + getColorDifference(image,row,col,row-1,col+1);
+        l = getColorDifference(image,row,col,row,col+1) + getColorDifference(image,row,col,row-1,col);
         r = getColorDifference(image,row,col,row,col+1) + getColorDifference(image,row,col+1,row-1,col);
     }
     else if(col == colsize - 1){
@@ -52,11 +52,11 @@ vector<int> getForwardCosts(Mat image,double row,double col){
         l = getColorDifference(image,row,col-1,row,col+1) + getColorDifference(image,row,col-1,row-1,col);
         r = getColorDifference(image,row,col-1,row,col+1) + getColorDifference(image,row,col+1,row-1,col);
     }
-    vector<int> costs;
+    double* costs = new double[3];
 
-    costs.push_back(l);
-    costs.push_back(u);
-    costs.push_back(r);
+    costs[0] = l;
+    costs[1] = u;
+    costs[2] = r;
 
     return costs;
 }
@@ -95,7 +95,6 @@ Mat getEnergyImage(Mat& image){
     return energyImage;
 }
 
-
 Mat getCumulativeEnergyMap(Mat& energyImage){
     int rowsize = energyImage.rows;
     int colsize = energyImage.cols;
@@ -105,13 +104,22 @@ Mat getCumulativeEnergyMap(Mat& energyImage){
 
     Mat cumulativeEnergyMap = Mat(rowsize,colsize,CV_64F,double(0));
 
-
     if(useForwardEnergy){
+        double* forwardCosts;
         for(int row = 0;row < rowsize;row++){
             for(int col = 0;col < colsize;col++){
-                upperLeftCumulativeEnergy = cumulativeEnergyMap.at<double>(row - 1,max(col - 1,0)); //max function to handle the left most column(which doesn't have col - 1)
-                upperCumulativeEnergy = cumulativeEnergyMap.at<double>(row-1,col);
-                upperRightCumulativeEnergy = cumulativeEnergyMap.at<double>(row - 1,min(col + 1,colsize-1)); //min function to handle the right most column(which doesn't have col + 1)
+                forwardCosts = getForwardCosts(energyImage,row,col);
+
+                if(row == 0){
+                    upperLeftCumulativeEnergy = forwardCosts[0];
+                    upperCumulativeEnergy = forwardCosts[1];
+                    upperRightCumulativeEnergy = forwardCosts[2];
+                }
+                else{
+                    upperLeftCumulativeEnergy = cumulativeEnergyMap.at<double>(row - 1,max(col - 1,0)); //max function to handle the left most column(which doesn't have col - 1)
+                    upperCumulativeEnergy = cumulativeEnergyMap.at<double>(row-1,col);
+                    upperRightCumulativeEnergy = cumulativeEnergyMap.at<double>(row - 1,min(col + 1,colsize-1)); //min function to handle the right most column(which doesn't have col + 1)
+                }
 
                 minimumCumulativeEnergyUntilNow = min(min(upperLeftCumulativeEnergy,upperCumulativeEnergy),upperRightCumulativeEnergy);
 
@@ -134,10 +142,6 @@ Mat getCumulativeEnergyMap(Mat& energyImage){
             }
         }
     }
-
-
-
-
 
     // create and show the newly created cumulative energy map converting map into color
 
@@ -200,7 +204,6 @@ vector<int> findOptimalSeam(Mat& cumulativeEnergyMap){
         }
         path[row] = minColIndex;
     }
-
 
     //we have now obtained a path from the last row to the first row, storing all the column values
 

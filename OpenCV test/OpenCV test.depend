@@ -1,5 +1,7 @@
 # depslib dependency file v1.0
-1571826536 source:d:\code\opencv test\main.cpp
+1571993874 source:d:\code\opencv test\main.cpp
 	<iostream>
 	<opencv2/opencv.hpp>
+	<vector>
+	<math.h>
 
