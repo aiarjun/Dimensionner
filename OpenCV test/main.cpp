@@ -1,10 +1,65 @@
 #include <iostream>
 #include <opencv2/opencv.hpp>
+#include <vector>
+#include <math.h>
 
 using namespace std;
 using namespace cv;
 
+bool useForwardEnergy = true;
+
 bool demo = false;
+
+double squareDifference(double x,double y){
+    return pow((x-y),2);
+}
+
+double getColorDifference(Mat image,double row1,double col1,double row2,double col2){
+    double blue1 = image.at<double>(row1,col1)[0];
+    double green1 = image.at<double>(row1,col1)[1];
+    double red1 = image.at<double>(row1,col1)[2];
+    double blue2 = image.at<double>(row2,col2)[0];
+    double green2 = image.at<double>(row2,col2)[1];
+    double red2 = image.at<double>(row2,col2)[2];
+
+    double difference = squareDifference(blue1,blue2) + squareDifference(green1,green2) + squareDifference(red1,red2);
+
+    return difference;
+}
+
+vector<int> getForwardCosts(Mat image,double row,double col){
+
+    double l = 0,u = 0,r = 0;
+
+    int rowsize = energyImage.rows;
+    int colsize = energyImage.cols;
+
+    if(row == 0){
+        u = getColorDifference(image,row,col-1,row,col+1);
+    }
+    else if(col == 0){
+        u = getColorDifference(image,row,col,row,col+1);
+        l = getColorDifference(image,row,col,row,col+1) + getColorDifference(image,row,col,row-1,col+1);
+        r = getColorDifference(image,row,col,row,col+1) + getColorDifference(image,row,col+1,row-1,col);
+    }
+    else if(col == colsize - 1){
+        u = getColorDifference(image,row,col,row,col-1);
+        l = getColorDifference(image,row,col,row,col-1) + getColorDifference(image,row,col-1,row-1,col);
+        r = getColorDifference(image,row,col,row,col-1) + getColorDifference(image,row,col,row-1,col);
+    }
+    else{
+        u = getColorDifference(image,row,col-1,row,col+1);
+        l = getColorDifference(image,row,col-1,row,col+1) + getColorDifference(image,row,col-1,row-1,col);
+        r = getColorDifference(image,row,col-1,row,col+1) + getColorDifference(image,row,col+1,row-1,col);
+    }
+    vector<int> costs;
+
+    costs.push_back(l);
+    costs.push_back(u);
+    costs.push_back(r);
+
+    return costs;
+}
 
 Mat getEnergyImage(Mat& image){
     Mat image_blur,image_grey;
@@ -50,21 +105,36 @@ Mat getCumulativeEnergyMap(Mat& energyImage){
 
     Mat cumulativeEnergyMap = Mat(rowsize,colsize,CV_64F,double(0));
 
-    energyImage.row(0).copyTo(cumulativeEnergyMap.row(0));
 
+    if(useForwardEnergy){
+        for(int row = 0;row < rowsize;row++){
+            for(int col = 0;col < colsize;col++){
+                upperLeftCumulativeEnergy = cumulativeEnergyMap.at<double>(row - 1,max(col - 1,0)); //max function to handle the left most column(which doesn't have col - 1)
+                upperCumulativeEnergy = cumulativeEnergyMap.at<double>(row-1,col);
+                upperRightCumulativeEnergy = cumulativeEnergyMap.at<double>(row - 1,min(col + 1,colsize-1)); //min function to handle the right most column(which doesn't have col + 1)
 
+                minimumCumulativeEnergyUntilNow = min(min(upperLeftCumulativeEnergy,upperCumulativeEnergy),upperRightCumulativeEnergy);
 
-    for(int row = 1;row < rowsize;row++){
-        for(int col = 0;col < colsize;col++){
-            upperLeftCumulativeEnergy = cumulativeEnergyMap.at<double>(row - 1,max(col - 1,0)); //max function to handle the left most column(which doesn't have col - 1)
-            upperCumulativeEnergy = cumulativeEnergyMap.at<double>(row-1,col);
-            upperRightCumulativeEnergy = cumulativeEnergyMap.at<double>(row - 1,min(col + 1,colsize-1)); //min function to handle the right most column(which doesn't have col + 1)
-
-            minimumCumulativeEnergyUntilNow = min(min(upperLeftCumulativeEnergy,upperCumulativeEnergy),upperRightCumulativeEnergy);
-
-            cumulativeEnergyMap.at<double>(row,col) = energyImage.at<double>(row,col) + minimumCumulativeEnergyUntilNow;
+                cumulativeEnergyMap.at<double>(row,col) = energyImage.at<double>(row,col) + minimumCumulativeEnergyUntilNow;
+            }
         }
     }
+    else{
+        energyImage.row(0).copyTo(cumulativeEnergyMap.row(0));
+
+        for(int row = 1;row < rowsize;row++){
+            for(int col = 0;col < colsize;col++){
+                upperLeftCumulativeEnergy = cumulativeEnergyMap.at<double>(row - 1,max(col - 1,0)); //max function to handle the left most column(which doesn't have col - 1)
+                upperCumulativeEnergy = cumulativeEnergyMap.at<double>(row-1,col);
+                upperRightCumulativeEnergy = cumulativeEnergyMap.at<double>(row - 1,min(col + 1,colsize-1)); //min function to handle the right most column(which doesn't have col + 1)
+
+                minimumCumulativeEnergyUntilNow = min(min(upperLeftCumulativeEnergy,upperCumulativeEnergy),upperRightCumulativeEnergy);
+
+                cumulativeEnergyMap.at<double>(row,col) = energyImage.at<double>(row,col) + minimumCumulativeEnergyUntilNow;
+            }
+        }
+    }
+
 
 
 
