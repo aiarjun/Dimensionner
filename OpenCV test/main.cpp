@@ -4,6 +4,8 @@
 using namespace std;
 using namespace cv;
 
+bool demo = false;
+
 Mat getEnergyImage(Mat& image){
     Mat image_blur,image_grey;
     int ddepth = CV_16S;
@@ -31,7 +33,9 @@ Mat getEnergyImage(Mat& image){
     gradient.convertTo(energyImage,CV_64F,1.0/255.0);
 
 
-    //namedWindow("Energy image",WINDOW_NORMAL);imshow("Energy image",energyImage);waitKey(0);
+    if(demo){
+        namedWindow("Energy image",WINDOW_NORMAL);imshow("Energy image",energyImage);waitKey(0);
+    }
 
     return energyImage;
 }
@@ -48,6 +52,8 @@ Mat getCumulativeEnergyMap(Mat& energyImage){
 
     energyImage.row(0).copyTo(cumulativeEnergyMap.row(0));
 
+
+
     for(int row = 1;row < rowsize;row++){
         for(int col = 0;col < colsize;col++){
             upperLeftCumulativeEnergy = cumulativeEnergyMap.at<double>(row - 1,max(col - 1,0)); //max function to handle the left most column(which doesn't have col - 1)
@@ -61,19 +67,20 @@ Mat getCumulativeEnergyMap(Mat& energyImage){
     }
 
 
+
+
     // create and show the newly created cumulative energy map converting map into color
 
-//    Mat color_cumulative_energy_map;
-//    double Cmin;
-//    double Cmax;
-//    minMaxLoc(cumulativeEnergyMap, &Cmin, &Cmax);
-//    float scale = 255.0 / (Cmax - Cmin);
-//    cumulativeEnergyMap.convertTo(color_cumulative_energy_map, CV_8UC1, scale);
-//    applyColorMap(color_cumulative_energy_map, color_cumulative_energy_map, cv::COLORMAP_JET);
-//    namedWindow("Cumulative Energy Map", WINDOW_NORMAL); imshow("Cumulative Energy Map", color_cumulative_energy_map);waitKey(0);
-
-
-//    namedWindow("Cumulative energy map",WINDOW_NORMAL);imshow("Cumulative energy map",cumulativeEnergyMap);
+    if(demo){
+        Mat color_cumulative_energy_map;
+        double Cmin;
+        double Cmax;
+        minMaxLoc(cumulativeEnergyMap, &Cmin, &Cmax);
+        float scale = 255.0 / (Cmax - Cmin);
+        cumulativeEnergyMap.convertTo(color_cumulative_energy_map, CV_8UC1, scale);
+        applyColorMap(color_cumulative_energy_map, color_cumulative_energy_map, cv::COLORMAP_JET);
+        namedWindow("Cumulative Energy Map", WINDOW_NORMAL); imshow("Cumulative Energy Map", color_cumulative_energy_map);waitKey(0);
+    }
 
     return cumulativeEnergyMap;
 }
@@ -139,7 +146,9 @@ void showPath(Mat energyImage,vector<int> path){
         energyImage.at<double>(row,path[row]) = 1;
     }
 
-    //namedWindow("Optimal seam",WINDOW_NORMAL);imshow("Optimal seam",energyImage);waitKey(0);
+    if(demo){
+        namedWindow("Optimal seam",WINDOW_NORMAL);imshow("Optimal seam",energyImage);waitKey(0);
+    }
 }
 
 Mat reduce(Mat& image,vector<int> path){
@@ -171,8 +180,9 @@ Mat reduce(Mat& image,vector<int> path){
     }
 
     image = image.colRange(0,colsize - 1);
-    //namedWindow("Reduced image",WINDOW_NORMAL);imshow("Reduced image",image);waitKey(0);
-
+    if(demo){
+        namedWindow("Reduced image",WINDOW_NORMAL);imshow("Reduced image",image);waitKey(0);
+    }
     return image;
 }
 
@@ -187,13 +197,19 @@ int main(int argc, char** argv) {
     int iterations;
     cout<<"Iterations : ";
     cin>>iterations;
+    demo = false;
+    cout<<"Demo ? <0/1> (Only one iteration) ";
+    cin>>demo;
+    if(demo){
+        iterations = 1;
+    }
     for(int i = 0;i < iterations;i++){
         cout<<i<<endl;
         Mat energyImage = getEnergyImage(image);
         Mat cumulativeEnergyImage = getCumulativeEnergyMap(energyImage);
         vector<int> path = findOptimalSeam(cumulativeEnergyImage);
         showPath(energyImage,path);
-        Mat reducedImage = reduce(image,path);
+        Mat reducedImage = reduce(image,path); //as image is passed by reference, the variable reduced image is discarded
     }
     imwrite("images/reduced_image.jpg",image);
     return 0;
